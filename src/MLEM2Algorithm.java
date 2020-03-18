@@ -16,7 +16,7 @@ public class MLEM2Algorithm {
 		Double currentValue;
 		TreeSet cutPoints = new TreeSet(); // create cut-points by taking average of consecutive numbers.
 		while (iter.hasNext()) {
-			currentValue = Double.parseDouble((String) iter.next());
+			currentValue = (Double) iter.next();
 			if (cutPoints.size() == 0 && sum == 0) {
 				sum = sum + currentValue;
 			} else {
@@ -29,26 +29,29 @@ public class MLEM2Algorithm {
 		return cutPoints;
 	}
 
-	private TreeSet calculateRangeSets(TreeSet cutPoints, TreeSet set) {
+	private TreeSet calculateRangeSets(TreeSet cutPoints, TreeSet<Double> set) {
 		Iterator it = cutPoints.iterator(); // use the range thing here....
 		Double currValue;
 		TreeSet<Range> setOfAllRanges = new TreeSet<Range>(); // Using Range class to create the bracket.
-		String firstValue = (String) set.first();
-		String lastValue = (String) set.last();
+		Double firstValue = set.first();
+		Double lastValue = set.last();
 		while (it.hasNext()) {
 			currValue = (Double) it.next();
-			setOfAllRanges.add(new Range(Double.parseDouble(firstValue), currValue));
-			setOfAllRanges.add(new Range(currValue, Double.parseDouble(lastValue)));
+			setOfAllRanges.add(new Range((firstValue), currValue));
+			setOfAllRanges.add(new Range(currValue, (lastValue)));
 		}
 		return setOfAllRanges;
 	}
 
-	private TreeSet calculateTheIntersectionSet(Map<AttributeValue, TreeSet> attributeValueSet,
-			TreeSet currentDecision) {
+	private TreeSet calculateTheIntersectionSet(Map<AttributeValue, TreeSet> attributeValueSet, TreeSet currentDecision,
+			List alreadyEvaluatedAttributeValues) {
 		int i = 1; // order of the intersection logic.
 		TreeSet<IntersectionSelection> avDvIntersectionSets = new TreeSet<IntersectionSelection>();
 		// set to contain the intersection of attribute values with decision,value.
 		for (Map.Entry<AttributeValue, TreeSet> entryAV : attributeValueSet.entrySet()) {
+			if (alreadyEvaluatedAttributeValues.contains(entryAV.getKey())) {
+				continue;
+			}
 			// run the intersection of each attribute value set with current decision
 			// and insert the result into the set, its sorting will identify which rule to
 			// be picked first.
@@ -67,11 +70,11 @@ public class MLEM2Algorithm {
 		Set<AttributeValue> tempAttributeValue = new HashSet<AttributeValue>();
 		for (Map.Entry<String, ArrayList> entry : attributeValues.entrySet()) {
 			String attributeName = entry.getKey(); // gets the unique attribute name.
-			List<String> listOfValuesforTheAttribute = entry.getValue();
+			List listOfValuesforTheAttribute = entry.getValue();
 			if (isCutPointsNecessary(listOfValuesforTheAttribute)) {
 				TreeSet set = new TreeSet(); // add all elements to Set (increasing order of values.)
 				for (int i = 0; i < listOfValuesforTheAttribute.size(); i++) {
-					set.add(listOfValuesforTheAttribute.get(i));
+					set.add(Double.parseDouble((String) listOfValuesforTheAttribute.get(i)));
 				}
 				TreeSet cutPoints = calculateCutPoints(listOfValuesforTheAttribute, set);
 				TreeSet rangeSets = calculateRangeSets(cutPoints, set);
@@ -79,7 +82,7 @@ public class MLEM2Algorithm {
 					Iterator rangesIterator = rangeSets.iterator();
 					while (rangesIterator.hasNext()) {
 						Range r = (Range) rangesIterator.next();
-						if (r.contains(Double.parseDouble(listOfValuesforTheAttribute.get(i)))) {
+						if (r.contains(Double.parseDouble((String) listOfValuesforTheAttribute.get(i)))) {
 							AttributeValue av = new AttributeValue(attributeName, r.toString());
 							if (!tempAttributeValue.contains(av)) {
 								tempAttributeValue.add(av);
@@ -99,7 +102,7 @@ public class MLEM2Algorithm {
 			} else {
 				// getValue() gets all possible values for that attribute in a list.
 				for (int i = 0; i < listOfValuesforTheAttribute.size(); i++) {
-					AttributeValue av = new AttributeValue(attributeName, listOfValuesforTheAttribute.get(i));
+					AttributeValue av = new AttributeValue(attributeName, (String) listOfValuesforTheAttribute.get(i));
 					// create a new attributeValue instance (if not already exisits)
 					if (!tempAttributeValue.contains(av)) {
 						tempAttributeValue.add(av);
@@ -156,8 +159,7 @@ public class MLEM2Algorithm {
 		// for goals.
 		System.out.println("\nProcessing...");
 		for (Map.Entry<AttributeValue, TreeSet> concept : decisionValueSet.entrySet()) {
-			// System.out.println("\nCurrent Concept => (d,w) = " + concept.getKey() + " ->
-			// " + concept.getValue());
+			System.out.println("\nCurrent Concept => (d,w) = " + concept.getKey() + " ->" + concept.getValue());
 			TreeSet completeDecision = concept.getValue(); // needed to check if the full concept is achieved or not,
 															// will never change during calculation.
 			TreeSet currentDecision = concept.getValue(); // this can get updated to a part of the complete decision
@@ -166,77 +168,108 @@ public class MLEM2Algorithm {
 			boolean recalc = false; // tells whether the algorithm needs a recalc of intersections between attribute
 									// value pairs and new goal(part goal)
 			boolean completeDecisionReached = false;
+			int test = 0;
+			List<AttributeValue> listOfRules = new ArrayList<AttributeValue>();
+			List alreadyCalculatedAttributeValues = new ArrayList();
+			TreeSet<?> rulesIntersectionCalculator = new TreeSet();
+			boolean partCalc = false;
 			do {
+				// System.out.println(currentDecision);
 				if (completeDecisionReached) {
 					break;
 				}
 				recalc = false;
-				TreeSet avDvIntersectionSets = calculateTheIntersectionSet(attributeValueSet, currentDecision);
-				// calculates the the intersections based on the attribute values and current
-				// decision.
-				Iterator<IntersectionSelection> it = avDvIntersectionSets.iterator();
-				List<AttributeValue> listOfRules = new ArrayList<AttributeValue>();
-				TreeSet<?> rulesIntersectionCalculator = new TreeSet();
-				while (it.hasNext()) {
-					// iterate over the intersections.
-					IntersectionSelection ruleToConsider = it.next(); // rules to consider are already sorted, so its
-																		// always the next rule.
-					if (ruleToConsider.intersectedCollection.isEmpty()) {
-						continue; // do not consider empty intersection sets.
-					}
-					if (listOfRules.isEmpty()) {
-						listOfRules.add(ruleToConsider.ruleId);
-						rulesIntersectionCalculator = (TreeSet<?>) ruleToConsider.avCollection.clone();
-						// add the first attribute value collection to rulesIntersection calculator
+				do {
+					TreeSet avDvIntersectionSets;
+					if (partCalc) {
+						partCalc = false;
+						avDvIntersectionSets = calculateTheIntersectionSet(attributeValueSet, currentDecision,
+								alreadyCalculatedAttributeValues);
 					} else {
-						listOfRules.add(ruleToConsider.ruleId);
-						rulesIntersectionCalculator.retainAll(ruleToConsider.avCollection);
-						// if not empty then use rulesIntersection calculator for cumulative
-						// intersection.
-					}
-					if (concept.getValue().containsAll(rulesIntersectionCalculator)) {
-						// check if the cumulative intersection of rules is subset of concept.
-						if (rulesIntersectionCalculator.equals(concept.getValue())) {
-							// if complete match with concept, goal achieved.
-							allListOfRules.add(new RulestoGoal(
-									concept.getKey().toString(), simplifyIntervals(simplify(listOfRules,
-											attributeValueSet, universe, rulesIntersectionCalculator)),
-									rulesIntersectionCalculator));
-							// System.out.println("Goal achieved" + rulesIntersectionCalculator
-							// + "is subset and matched goal " + concept.getValue());
-							completeDecisionReached = true;
-						} else {
-							// part of goal satisfied.
-							allListOfRules.add(new RulestoGoal(
-									concept.getKey().toString(), simplifyIntervals(simplify(listOfRules,
-											attributeValueSet, universe, rulesIntersectionCalculator)),
-									rulesIntersectionCalculator));
-							currentDecision = new TreeSet(concept.getValue());
-							// current decision gets updated..
-							partDecision.addAll(rulesIntersectionCalculator);
-							// partDecision maintains cumulative of all goals achieved.
-							currentDecision.removeAll(partDecision);
-							// current decision gets updated to total concept minus part decision.
-							if (partDecision.equals(concept.getValue())) {
-								completeDecisionReached = true;
-								recalc = false;
-								// System.out.println("Complete goal achieved.. ");
-							} else {
-								// System.out.println("Part Goal achieved" + rulesIntersectionCalculator + "is
-								// subset of"
-								// + concept.getValue());
-								// System.out.println("Therefore the goal changes.. " + currentDecision);
-								recalc = true;
-							}
-							break;
-						}
-					} else {
-						// if its not the subset, go ahead and take the next rule from
-						// avDvIntersectionSets
-						continue;
+						avDvIntersectionSets = calculateTheIntersectionSet(attributeValueSet, currentDecision,
+								new ArrayList());
+						listOfRules = new ArrayList<AttributeValue>();
+						rulesIntersectionCalculator = new TreeSet();
 					}
 
-				}
+					// calculates the the intersections based on the attribute values and current
+					// decision.
+					Iterator<IntersectionSelection> it = avDvIntersectionSets.iterator();
+
+					while (it.hasNext()) {
+
+						// iterate over the intersections.
+						IntersectionSelection ruleToConsider = it.next(); // rules to consider are already sorted, so
+						alreadyCalculatedAttributeValues.add(ruleToConsider.ruleId); // its
+						// always the next rule.
+						if (ruleToConsider.intersectedCollection.isEmpty()) {
+							continue; // do not consider empty intersection sets.
+						}
+						if (listOfRules.isEmpty()) {
+							listOfRules.add(ruleToConsider.ruleId);
+							rulesIntersectionCalculator = (TreeSet<?>) ruleToConsider.avCollection.clone();
+							// add the first attribute value collection to rulesIntersection calculator
+						} else {
+							listOfRules.add(ruleToConsider.ruleId);
+							rulesIntersectionCalculator.retainAll(ruleToConsider.avCollection);
+							// if not empty then use rulesIntersection calculator for cumulative
+							// intersection.
+						}
+						if (concept.getValue().containsAll(rulesIntersectionCalculator)) {
+							// check if the cumulative intersection of rules is subset of concept.
+							if (rulesIntersectionCalculator.equals(concept.getValue())) {
+								// if complete match with concept, goal achieved.
+								allListOfRules.add(new RulestoGoal(
+										concept.getKey().toString(), simplifyIntervals(simplify(listOfRules,
+												attributeValueSet, universe, rulesIntersectionCalculator)),
+										rulesIntersectionCalculator));
+								// System.out.println("Goal achieved" + rulesIntersectionCalculator
+								// + "is subset and matched goal " + concept.getValue());
+								completeDecisionReached = true;
+								break;
+							} else {
+								// part of goal satisfied.
+								allListOfRules.add(new RulestoGoal(
+										concept.getKey().toString(), simplifyIntervals(simplify(listOfRules,
+												attributeValueSet, universe, rulesIntersectionCalculator)),
+										rulesIntersectionCalculator));
+								currentDecision = new TreeSet(concept.getValue());
+								// current decision gets updated..
+								partDecision.addAll(rulesIntersectionCalculator);
+								// partDecision maintains cumulative of all goals achieved.
+								currentDecision.removeAll(partDecision);
+								// current decision gets updated to total concept minus part decision.
+								if (partDecision.equals(concept.getValue())) {
+									completeDecisionReached = true;
+									recalc = false;
+									// System.out.println("Complete goal achieved.. ");
+								} else {
+									// System.out.println("Part Goal achieved" + rulesIntersectionCalculator + "is
+									// subset of"
+									// + concept.getValue());
+									// System.out.println("Therefore the goal changes.. " + currentDecision);
+									recalc = true;
+								}
+								break;
+							}
+						} else {
+
+							TreeSet duplicaterulesIntersectionCalculator = (TreeSet) rulesIntersectionCalculator
+									.clone();
+							duplicaterulesIntersectionCalculator.retainAll(currentDecision);
+							if (!duplicaterulesIntersectionCalculator.equals(currentDecision)) {
+								currentDecision = duplicaterulesIntersectionCalculator;
+								// System.out.println("updated current decision" + currentDecision);
+								partCalc = true;
+								break;
+							}
+							// if its not the subset, go ahead and take the next rule from
+							// avDvIntersectionSets
+							continue;
+						}
+
+					}
+				} while (partCalc);
 
 			} while (recalc); // if recalc is set to true, execute the same process with same concept but
 								// different currentDecision
@@ -249,6 +282,7 @@ public class MLEM2Algorithm {
 
 	private List simplify(List listOfRules, Map<AttributeValue, TreeSet> attributeValueSet, TreeSet universe,
 			TreeSet conceptsCovered) {
+		// System.out.println("simplify" + listOfRules);
 		int numberOfRules = listOfRules.size();
 		int ruleIndexThatCanBeRemoved = -1;
 		for (int j = 0; j < numberOfRules; j++) {
@@ -261,7 +295,7 @@ public class MLEM2Algorithm {
 				set.retainAll(attributeValueSet.get((listOfRules.get(k))));
 			}
 			if (conceptsCovered.containsAll(set)) {
-				// ruleIndexThatCanBeRemoved = j;
+				ruleIndexThatCanBeRemoved = j;
 				break;
 			}
 		}
