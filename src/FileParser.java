@@ -10,6 +10,7 @@ public class FileParser {
 		String line = "";
 		String[] attributes = {};
 		String values[] = {};
+		boolean missingAttributes = false;
 		Map<String, ArrayList> mapAttributeValues = new LinkedHashMap();
 		Map<String, ArrayList> mapDecisionValues = new LinkedHashMap();
 		while ((line = br.readLine()) != null) {
@@ -36,12 +37,16 @@ public class FileParser {
 					if (attributes.length - 1 == i) {
 						(mapDecisionValues.get(attributes[i])).add(values[i]);
 					} else {
+						if (values[i].equalsIgnoreCase("*") || values[i].equalsIgnoreCase("-")
+								|| values[i].equalsIgnoreCase("?")) {
+							missingAttributes = true;
+						}
 						(mapAttributeValues.get(attributes[i])).add(values[i]);
 					}
 				}
 			}
 		}
-		return new Object[] { mapAttributeValues, mapDecisionValues };
+		return new Object[] { mapAttributeValues, mapDecisionValues, missingAttributes };
 
 	}
 

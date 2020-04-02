@@ -1,3 +1,5 @@
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,7 +12,31 @@ import java.util.TreeSet;
 
 public class MLEM2Algorithm {
 
+	public Map<Integer, List<AttributeValue>> buildCaseToListOfAttributeValues(
+			Map<AttributeValue, TreeSet> attributeValueSet) {
+		Map<Integer, List<AttributeValue>> characteristicSetBuilder = new HashMap();
+		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
+			AttributeValue av = entry.getKey();
+			TreeSet avSet = entry.getValue();
+			Iterator it = avSet.iterator();
+			while (it.hasNext()) {
+				int caseNum = (Integer) it.next();
+				if (characteristicSetBuilder.get(caseNum) == null) {
+					List avList = new ArrayList();
+					avList.add(av);
+					characteristicSetBuilder.put(caseNum, avList);
+				} else {
+					List avList = characteristicSetBuilder.get(caseNum);
+					avList.add(av);
+				}
+			}
+		}
+		return characteristicSetBuilder;
+	}
+
 	private TreeSet calculateCutPoints(List<String> listOfValuesforTheAttribute, TreeSet set) {
+		DecimalFormat df = new DecimalFormat("0.00");
+		df.setRoundingMode(RoundingMode.DOWN);
 		Iterator iter = set.iterator();
 		double sum = 0.0;
 		Double currentValue;
@@ -21,7 +47,7 @@ public class MLEM2Algorithm {
 				sum = sum + currentValue;
 			} else {
 				sum = sum + currentValue;
-				cutPoints.add(sum / 2);
+				cutPoints.add(Double.parseDouble(df.format(sum / 2)));
 				sum = currentValue;
 			}
 		}
@@ -65,7 +91,7 @@ public class MLEM2Algorithm {
 	}
 
 	// Used to identify cases for each attribute and value.
-	private Map identifyCasesAndMapTo(Map<String, ArrayList> attributeValues) {
+	public Map identifyCasesAndMapTo(Map<String, ArrayList> attributeValues) {
 		Map<AttributeValue, TreeSet> attributeValueSet = new LinkedHashMap();
 		Set<AttributeValue> tempAttributeValue = new HashSet<AttributeValue>();
 		for (Map.Entry<String, ArrayList> entry : attributeValues.entrySet()) {
@@ -134,30 +160,12 @@ public class MLEM2Algorithm {
 		return false;
 	}
 
-	public void runAlgorithm(Map<String, ArrayList> attributeValues, Map<String, ArrayList> decisionValues) {
-		// identify the cases for the attribute values --> example : (noise,low) -->
-		// cases are {1,2,4,5}
-		Map<AttributeValue, TreeSet> attributeValueSet = identifyCasesAndMapTo(attributeValues);
-		Map<AttributeValue, TreeSet> decisionValueSet = identifyCasesAndMapTo(decisionValues);
-		TreeSet universe = new TreeSet();
-		// identify the concepts for the decision values --> example : (quality,low) -->
-		// cases are {1,3}
-		System.out.println("Attribute -> Value");
-		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
-			System.out.println(entry.getKey() + " -> " + entry.getValue());
-		}
-		System.out.println("\n");
-		System.out.println("Decision -> Value");
-		for (Map.Entry<AttributeValue, TreeSet> entry : decisionValueSet.entrySet()) {
-			System.out.println(entry.getKey() + " -> " + entry.getValue());
-			universe.addAll(entry.getValue());
-		}
-
+	public ArrayList<RulestoGoal> runAlgorithm(Map<AttributeValue, TreeSet> attributeValueSet,
+			Map<AttributeValue, TreeSet> decisionValueSet, TreeSet universe) {
 		ArrayList<RulestoGoal> allListOfRules = new ArrayList<RulestoGoal>();// list of all rules.
 
 		// iterate over each concept in decisionValueSet and start calculation of rules
 		// for goals.
-		System.out.println("\nProcessing...");
 		for (Map.Entry<AttributeValue, TreeSet> concept : decisionValueSet.entrySet()) {
 			System.out.println("\nCurrent Concept => (d,w) = " + concept.getKey() + " ->" + concept.getValue());
 			TreeSet completeDecision = concept.getValue(); // needed to check if the full concept is achieved or not,
@@ -216,7 +224,7 @@ public class MLEM2Algorithm {
 							// intersection.
 						}
 						if (concept.getValue().containsAll(rulesIntersectionCalculator)) {
-							// check if the cumulative intersection of rules is subset of concept.
+							// chec k if the cumulative intersection of rules is subset of concept.
 							if (rulesIntersectionCalculator.equals(concept.getValue())) {
 								// if complete match with concept, goal achieved.
 								allListOfRules.add(new RulestoGoal(
@@ -274,6 +282,30 @@ public class MLEM2Algorithm {
 			} while (recalc); // if recalc is set to true, execute the same process with same concept but
 								// different currentDecision
 		}
+		return allListOfRules;
+	}
+
+	public void runAlgorithm(Map<String, ArrayList> attributeValues, Map<String, ArrayList> decisionValues) {
+		// identify the cases for the attribute values --> example : (noise,low) -->
+		// cases are {1,2,4,5}
+		Map<AttributeValue, TreeSet> attributeValueSet = identifyCasesAndMapTo(attributeValues);
+		Map<AttributeValue, TreeSet> decisionValueSet = identifyCasesAndMapTo(decisionValues);
+		TreeSet universe = new TreeSet();
+		// identify the concepts for the decision values --> example : (quality,low) -->
+		// cases are {1,3}
+		System.out.println("Attribute -> Value");
+		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
+			System.out.println(entry.getKey() + " -> " + entry.getValue());
+		}
+		System.out.println("\n");
+		System.out.println("Decision -> Value");
+		for (Map.Entry<AttributeValue, TreeSet> entry : decisionValueSet.entrySet()) {
+			System.out.println(entry.getKey() + " -> " + entry.getValue());
+			universe.addAll(entry.getValue());
+		}
+
+		System.out.println("\nProcessing...");
+		List allListOfRules = runAlgorithm(decisionValueSet, attributeValueSet, universe);
 		System.out.println("\nFinal Ruleset...");
 		for (int i = 0; i < allListOfRules.size(); i++) {
 			System.out.println(allListOfRules.get(i));
