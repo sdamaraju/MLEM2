@@ -2,10 +2,12 @@
 public class AttributeValue {
 	String attribute;
 	String value;
+	Boolean isRangeSpecific;
 
-	public AttributeValue(String attribute, String value) {
+	public AttributeValue(String attribute, String value, Boolean isRangeSpecific) {
 		this.attribute = attribute; // example : Noise
 		this.value = value; // example : low
+		this.isRangeSpecific = isRangeSpecific;
 	}
 
 	@Override

@@ -45,6 +45,6 @@ public class IntersectionSelection implements Comparable {
 		// + sizeOfAttributes + " order of the attribute" + orderOfAttribute + " Already
 		// Used => " + alreadyUsed
 		// + "\n";
-		return ruleId.toString();
+		return ruleId.toString() + this.avCollection;
 	}
 }

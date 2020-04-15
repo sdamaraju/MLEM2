@@ -2,18 +2,21 @@ import java.util.List;
 import java.util.TreeSet;
 
 public class RulestoGoal {
-	List listOfRules;
+	List listOfConditions;
 	TreeSet conceptsCovered;
-	String goal;
+	AttributeValue goal;
+	String XYZ;
 
-	public RulestoGoal(String goal, List listOfRules, TreeSet conceptsCovered) {
+	public RulestoGoal(AttributeValue goal, List listOfConditions, TreeSet conceptsCovered) {
 		this.goal = goal;
-		this.listOfRules = listOfRules;
+		this.listOfConditions = listOfConditions;
 		this.conceptsCovered = conceptsCovered;
 	}
 
 	@Override
 	public String toString() {
-		return this.listOfRules + " --> " + this.goal + " --> " + this.conceptsCovered.toString();
+		String listToString = this.listOfConditions.toString();
+		return this.XYZ + "\n" + listToString.substring(1, listToString.length() - 1) + " -> " + this.goal + "\n";
+		// + " --> " + this.conceptsCovered.toString();
 	}
 }

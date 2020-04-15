@@ -27,6 +27,10 @@ public class Range implements Comparable {
 		return x >= this.minimum && x <= this.maximum;
 	}
 
+	public boolean isSuperSet(Range r) {
+		return (this.minimum <= r.minimum && this.maximum >= r.maximum);
+	}
+
 	@Override
 	public String toString() {
 		return this.minimum.toString() + "..." + this.maximum.toString();
