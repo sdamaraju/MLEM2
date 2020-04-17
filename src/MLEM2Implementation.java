@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -10,6 +11,36 @@ import java.util.Scanner;
 public class MLEM2Implementation {
 
 	public static void main(String[] args) throws IOException {
+		Object io[] = performIO();
+		// URL url = new
+		// URL("https://people.eecs.ku.edu//~jerzygb/data//iris-35-h.txt"); //
+		// BufferedReader br1 = new BufferedReader(new
+		// InputStreamReader(url.openStream()));//
+		// File file = new
+		// File("/Users/sdamaraju/Desktop/EECS839/MLEM2NotesProblem2.txt");
+		// BufferedReader br = new BufferedReader(new FileReader(file));
+
+		Object[] problemMetaData = FileParser.parseFileToCreateComputationalData((BufferedReader) io[0]);
+		// Object[] problemMetaData =
+		// FileParser.parseFileToCreateComputationalData(br1);
+		Boolean missingAttributes = (Boolean) problemMetaData[2];
+		MLEM2Algorithm algo = new MLEM2Algorithm();
+		ArrayList finalRuleset = new ArrayList();
+		if (missingAttributes) {
+			finalRuleset = algo.preWorkAndRunAlgorithm((Map) problemMetaData[0], (Map) problemMetaData[1],
+					/* (Boolean) io[1] */ false);
+		} else {
+			finalRuleset = algo.runAlgorithm((Map) problemMetaData[0], (Map) problemMetaData[1]);
+		}
+
+		String finalResultString = finalRuleset.toString();
+		FileOutputStream writer = (FileOutputStream) io[2];
+		writer.write(finalResultString.substring(1, finalResultString.length() - 1).getBytes());
+		writer.close();
+	}
+
+	private static Object[] performIO() throws FileNotFoundException {
+		Object[] ioRequirements = new Object[3];
 		System.out.println("EECS 839, Programming project \n Sai krishna Teja Damaraju \n #3028488 \n\n");
 		System.out.println("#File input details#");
 		System.out.println("Please enter a valid input file name with absolute path...");
@@ -31,6 +62,7 @@ public class MLEM2Implementation {
 			}
 		} while (!inputFileSuccess);
 		System.out.println("File loaded successfully ! \n");
+		ioRequirements[0] = br;
 		System.out.println("#Approximation level details#");
 		System.out.println("Please type in 'lower' for lower concept approximation...");
 		System.out.println(
@@ -42,6 +74,7 @@ public class MLEM2Implementation {
 		System.out.println("Considering " + (lowerApproximation ? "'LOWER Approximation'" : "'UPPER Approximation'")
 				+ " based on input provided ->" + approximationDetail);
 		System.out.print("\n");
+		ioRequirements[1] = lowerApproximation;
 		System.out.println("#Result output file details#");
 		System.out.println("Please enter an output file (path) name...");
 		String outputFilePath = sc.nextLine();
@@ -59,21 +92,8 @@ public class MLEM2Implementation {
 			}
 		} while (!outputFileSuccess);
 		FileOutputStream writer = new FileOutputStream(outputFilePath);
-
-		Object[] problemMetaData = FileParser.parseFileToCreateComputationalData(br);
-		Boolean missingAttributes = (Boolean) problemMetaData[2];
-		MLEM2Algorithm algo = new MLEM2Algorithm();
-
-		ArrayList finalRuleset = new ArrayList();
-		if (missingAttributes) {
-			finalRuleset = algo.preWorkAndRunAlgorithm((Map) problemMetaData[0], (Map) problemMetaData[1],
-					lowerApproximation);
-		} else {
-			finalRuleset = algo.runAlgorithm((Map) problemMetaData[0], (Map) problemMetaData[1]);
-		}
-		String finalResultString = finalRuleset.toString();
-		writer.write(finalResultString.substring(1, finalResultString.length() - 1).getBytes());
-		writer.close();
+		ioRequirements[2] = writer;
+		return ioRequirements;
 	}
 
 }
@@ -85,7 +105,6 @@ public class MLEM2Implementation {
 
 //*** minor issue, decimals taking too much unnecessary precision.. solved
 //major issue solved. missed goal = goal intersection [t] done..
-//*** minor simplification issue, call simplifyIntervals and then simplify rules.. but once interval is simplified, cant get the attribute value pairs as cutpoints are solved.. handle this
 
 // otherwise tested on multiple data, looks fine.
 
@@ -94,14 +113,17 @@ public class MLEM2Implementation {
 //		data.
 // 6. Approximation calculations.. DONE
 // 7. concept approximation.. characteristic sets.. DONE
+//8.Handle IO as per the instructions ...DONE
+//9.Clean the code and optimize wherevr possible. ...DONE
+///10 Comments wherver necessary ..DONE
 
 //Pending :
 //Rigorous testing on exam problem hw problem and all classwork problems and sample problems
-//Handle IO as per the instructions
-// Clean the code and optimize wherevr possible.
-/// Comments wherver necessary
 // readme file
+//*** minor simplification issue, call simplifyIntervals and then
+//simplify rules.. but once interval is simplified, cant get the attribute value pairs as cutpoints are solved.. handle this
 
+//====URLS and files for data
 // URL url = new
 // URL("https://people.eecs.ku.edu//~jerzygb//data//m-global.txt");
 // URL url = new

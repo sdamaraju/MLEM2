@@ -12,7 +12,12 @@ import java.util.TreeSet;
 
 public class MLEM2Algorithm {
 
-	public Map<Integer, List<AttributeValue>> buildCaseToListOfAttributeValues(
+	// this is a utility method, that goes over the attribute value set and reverses
+	// the table over the pivot,
+	// for example for the given attributeValueSet we get the following as output 1
+	// -> {(A1,V1),(A2,V2)}
+	// where 1 is the case-number and A1V1 and A2V2 are attribute value pairs
+	private Map<Integer, List<AttributeValue>> buildCaseToListOfAttributeValues(
 			Map<AttributeValue, TreeSet> attributeValueSet) {
 		Map<Integer, List<AttributeValue>> characteristicSetBuilder = new HashMap();
 		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
@@ -34,6 +39,92 @@ public class MLEM2Algorithm {
 		return characteristicSetBuilder;
 	}
 
+// calculates the approximations based on the decision value set and characteristic set.
+	private Map calculateApporximation(Map<AttributeValue, TreeSet> decisionValueSet,
+			LinkedHashMap caseAndCharacteristicSet, boolean lower) {
+		// ----Calculate concept approximations..
+		Map conceptAndLowerConceptApproximations = new HashMap();
+		Map conceptAndUpperConceptApproximations = new HashMap();
+		for (Map.Entry<AttributeValue, TreeSet> entry : decisionValueSet.entrySet()) {
+			TreeSet lowerConceptApproximation = new TreeSet();
+			TreeSet upperConceptApproximation = new TreeSet();
+			TreeSet<Integer> concept = (TreeSet) entry.getValue().clone();
+			Iterator it = concept.iterator();
+			while (it.hasNext()) { // concept approximation, runs only over the concept.
+				TreeSet set = (TreeSet) caseAndCharacteristicSet.get(it.next()); // get the characteristic set for case
+																					// nums in concepts.
+				if (concept.containsAll(set)) { // check if the characteristicset is subset of concept
+					lowerConceptApproximation.addAll(set); // if yes, addall (union) the characteristic set
+				} // lower approximation done.
+					// Upper approximation
+				TreeSet conceptClone = (TreeSet) concept.clone();
+				// if concept intersection with characteristic set is not empty, addall
+				// characteristic set
+				conceptClone.retainAll(set);
+				if (!conceptClone.isEmpty()) {
+					upperConceptApproximation.addAll(set);
+				} // else get to next characteristic set
+			}
+			conceptAndLowerConceptApproximations.put(entry.getKey(), lowerConceptApproximation);
+			conceptAndUpperConceptApproximations.put(entry.getKey(), upperConceptApproximation);
+		}
+		if (lower)
+			return conceptAndLowerConceptApproximations;
+		else
+			return conceptAndUpperConceptApproximations;
+	}
+
+	// Calculates the characteristic set.
+	private TreeSet calculateCharacteristicSet(Map<Integer, List<AttributeValue>> caseToListOfAttributeValues,
+			Map<Integer, List<AttributeValue>> reCalculatedCaseToListOfAttributeValues,
+			Map<AttributeValue, TreeSet> attributeValueSet, TreeSet universe) {
+		// ----CharacteristicSet calculator
+		TreeSet characteristicSet = new TreeSet();
+		// Iterates over all the cases using the caseToListOfAttributeValues, its
+		// entries value will have list of attribute values.
+		for (Map.Entry<Integer, List<AttributeValue>> entry : caseToListOfAttributeValues.entrySet()) {
+			List avList = entry.getValue();
+			TreeSet set = new TreeSet();
+			for (int i = 0; i < avList.size(); i++) { // iterate over each attribute value, get its set of cases from
+														// attribute value set and perform intersection operation for
+														// all of
+														// them
+				AttributeValue av = (AttributeValue) avList.get(i);
+				TreeSet setToUse = new TreeSet();
+				if (av.value.equals("*") || av.value.equals("?")) { // if its * or ?, just use universe.
+					setToUse = (TreeSet) universe.clone();
+				} else if (av.value.equals("-")) { // if its "-", use the recalculatedCaseToListOfAVs, to get all the
+													// other attribute values, and perform a union between them
+					List avs = reCalculatedCaseToListOfAttributeValues.get(entry.getKey());
+					for (int j = 0; j < avs.size(); j++) {
+						AttributeValue avRecalc = (AttributeValue) avs.get(j);
+						if (avRecalc.attribute.equals(av.attribute)) {
+							setToUse.addAll(attributeValueSet.get(avRecalc));
+						}
+					}
+					if (setToUse.isEmpty()) {
+						setToUse = universe;
+					}
+				} else {
+					setToUse = (TreeSet) attributeValueSet.get(av).clone(); // use the attribute value set to get the
+																			// required av collections
+				}
+				if (set.isEmpty()) {
+					set = setToUse;
+				} else {
+					set.retainAll(setToUse); // perform intersection in a loop
+				}
+			}
+			characteristicSet.add(new CharacteristicSet(entry.getKey(), set)); // finally create a new characteristic
+																				// set object.
+		}
+		return characteristicSet;
+	}
+
+	// Identify the cutpoints by summing up every 2 numbers in the consecutive
+	// sorted order and dividing them by 2 and add the result back to a set to get
+	// the
+	// list of cutpoints
 	private TreeSet calculateCutPoints(List<String> listOfValuesforTheAttribute, TreeSet set) {
 		DecimalFormat df = new DecimalFormat("0.00");
 		df.setRoundingMode(RoundingMode.DOWN);
@@ -60,6 +151,7 @@ public class MLEM2Algorithm {
 		return cutPoints;
 	}
 
+	// Once we have cutpoints, this method calculates the Ranges (intervals)
 	private TreeSet calculateRangeSets(TreeSet cutPoints, TreeSet<Double> set) {
 		Iterator it = cutPoints.iterator(); // use the range thing here....
 		Double currValue;
@@ -79,12 +171,53 @@ public class MLEM2Algorithm {
 		return setOfAllRanges;
 	}
 
+	// calculates the set to be intersected for simplification of conditions that
+	// have ranges whose intervals are already been simplified.
+	// say example : 6..30 , 4..14 were original intervals, simplified to 6..14
+	// attribute value set will not find any record with 6..14
+	private TreeSet calculateSetTobeIntersected(AttributeValue currentCondition,
+			Map<AttributeValue, TreeSet> attributeValueSet) {
+		if (!currentCondition.isRangeSpecific) { // if not rangespecific, return, we are doomed, this should not happen
+													// // if its not rangespecific.
+			return null;
+		}
+		Range currentRange = new Range(currentCondition.value); // get currentCondition's range
+		TreeSet<Range> rangesSet = new TreeSet();
+		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
+			if (entry.getKey().attribute.equals(currentCondition.attribute)) {
+				rangesSet.add(new Range(entry.getKey().value));
+			}
+		} // add all the ranges for that attribute to a set.
+		Iterator<Range> rangesSetIterator = rangesSet.iterator();
+		Range[] rangesTobeIntersected = new Range[2];
+		int rangeSize = 0;
+		while (rangesSetIterator.hasNext()) { // iterate over all ranges and identify the minimum and maximum matches.
+			Range next = rangesSetIterator.next();
+			if (next.minimum.equals(currentRange.minimum) || next.maximum.equals(currentRange.maximum)) {
+				rangesTobeIntersected[rangeSize++] = next;
+			}
+			if (rangeSize == 2) {// there will be only 2 ranges, 1 matching the minimum and 1 matching the
+									// maximum
+				break;
+			}
+		} // now intersect the avs identified by avs using the 2 ranges
+		AttributeValue av1 = new AttributeValue(currentCondition.attribute, rangesTobeIntersected[0].toString(), true);
+		AttributeValue av2 = new AttributeValue(currentCondition.attribute, rangesTobeIntersected[1].toString(), true);
+		TreeSet setTobeIntersected = (TreeSet) attributeValueSet.get(av1).clone();
+		setTobeIntersected.retainAll(attributeValueSet.get(av2));
+		return setTobeIntersected;
+	}
+
+	// calculate the intersections for current decision and attribute value set and
+	// return the intersections ina specific order.
 	private TreeSet calculateTheIntersectionSet(Map<AttributeValue, TreeSet> attributeValueSet, TreeSet currentDecision,
 			List<AttributeValue> alreadyEvaluatedAttributeValues) {
 		int i = 1; // order of the intersection logic.
 		TreeSet<IntersectionSelection> avDvIntersectionSets = new TreeSet<IntersectionSelection>();
 		// set to contain the intersection of attribute values with decision,value.
 		for (Map.Entry<AttributeValue, TreeSet> entryAV : attributeValueSet.entrySet()) {
+			// below check, evaluates if its possible to skip the attribute value set, like
+			// superset, or already evaluated attribute etc
 			if (isConditionSkipPossible(alreadyEvaluatedAttributeValues, entryAV.getKey())) {
 				continue;
 			}
@@ -92,14 +225,19 @@ public class MLEM2Algorithm {
 			// and insert the result into the set, its sorting will identify which rule to
 			// be picked first.
 			TreeSet<?> tempSet = (TreeSet<?>) entryAV.getValue().clone(); // tempSet needed to alter the set // during
-			// the intersection logic
 			tempSet.retainAll(currentDecision); // actual intersection logic.
+			// IntersectionSelection has a defined sorting order that helps it priortize
+			// which intersection to be selected.
 			avDvIntersectionSets.add(new IntersectionSelection(entryAV.getKey(), tempSet, entryAV.getValue(),
 					entryAV.getValue().size(), i++));
 		}
 		return avDvIntersectionSets;
 	}
 
+	// This method helps to calculate the X Y Z, significance, strength and
+	// specificity of the rule, x is number of conditions in the rule.
+	// y is size of the intersection of decision with the concepts covered by this
+	// rule and z is size of concepts covered.
 	private ArrayList<RulestoGoal> calculateXYZ(ArrayList<RulestoGoal> allListOfRulesForAllDecisions,
 			Map<AttributeValue, TreeSet> originalDecisionValueSet) {
 		int x, y, z;
@@ -116,7 +254,8 @@ public class MLEM2Algorithm {
 		return allListOfRulesForAllDecisions;
 	}
 
-	// Used to identify cases for each attribute and value.
+	// Used to identify cases for each attribute and value., if decision is true, do
+	// not calculate cutpoints.
 	public Map identifyCasesAndMapTo(Map<String, ArrayList> attributeValues, Boolean isDecision) {
 		Map<AttributeValue, TreeSet> attributeValueSet = new LinkedHashMap();
 		Set<AttributeValue> tempAttributeValue = new HashSet<AttributeValue>();
@@ -192,6 +331,7 @@ public class MLEM2Algorithm {
 		return attributeValueSet;
 	}
 
+	// check if (a,v) can be skipped during the intersection logic.
 	private boolean isConditionSkipPossible(List<AttributeValue> alreadyCalcuatedAttributeValues,
 			AttributeValue currentCondition) {
 		if (alreadyCalcuatedAttributeValues.contains(currentCondition)) {
@@ -247,6 +387,8 @@ public class MLEM2Algorithm {
 
 	}
 
+	// Check if cutpoints are necessary, depends on successful parsing of float
+	// values
 	private boolean isCutPointsNecessary(List listOfValuesForTheAttribute) {
 		for (int i = 0; i <= listOfValuesForTheAttribute.size(); i++) {
 			try {
@@ -263,21 +405,23 @@ public class MLEM2Algorithm {
 		return false;
 	}
 
+	// this method gets called, if dataset is incomplete with missing attributes.
+	// this method evaluates the missing attributes, calculates the characteristic
+	// sets, followed by the concept approximations and then runs the MLEM2Algorithm
 	public ArrayList preWorkAndRunAlgorithm(Map<String, ArrayList> attributeValues,
 			Map<String, ArrayList> decisionValues, boolean lowerApproximation) {
 		// -- AV to cases mapping
 		Map<AttributeValue, TreeSet> attributeValueSet = identifyCasesAndMapTo(attributeValues, false);
-		Map<AttributeValue, TreeSet> attributeValueSetCopy = identifyCasesAndMapTo(attributeValues, false);
 		Map<AttributeValue, TreeSet> decisionValueSet = identifyCasesAndMapTo(decisionValues, true);
 		TreeSet universe = new TreeSet();
 		for (Map.Entry<AttributeValue, TreeSet> entry : decisionValueSet.entrySet()) {
 			// System.out.println(entry.getKey() + " -> " + entry.getValue());
 			universe.addAll(entry.getValue());
 		}
-
+		// identify cases to list of attributes and values.
 		Map<Integer, List<AttributeValue>> caseToListOfAttributeValues = buildCaseToListOfAttributeValues(
 				attributeValueSet);
-
+		// identify cases to list of decision values
 		Map<Integer, List<AttributeValue>> caseTodecisionValue = buildCaseToListOfAttributeValues(decisionValueSet);
 		System.out.println("Attribute -> Value");
 		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
@@ -289,11 +433,82 @@ public class MLEM2Algorithm {
 			System.out.println(entry.getKey() + " -> " + entry.getValue());
 			universe.addAll(entry.getValue());
 		}
+
+		// this method resolves, don't care conditions (*) and other attribute values
+		// (-)
+		attributeValueSet = resolveAttributeValueSetSolvingMissingAttributes(attributeValueSet, caseTodecisionValue,
+				caseToListOfAttributeValues, decisionValueSet);
+
+		// remove unnecessary */-/? from attributeValueSet
+		Map<AttributeValue, TreeSet> attributeValueSetCopy = new LinkedHashMap();
+		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
+			if (entry.getKey().value.equals("*") || entry.getKey().value.equals("?")
+					|| entry.getKey().value.equals("-")) {
+				// skip
+			} else {
+				attributeValueSetCopy.put(entry.getKey(), entry.getValue());
+			}
+		}
+		attributeValueSet = attributeValueSetCopy;
+		// Once all the missing values for the attributes are ignored and taken care by
+		// resolving them to other cases appropriately, create a fresh cases to
+		// attribute values set
+		Map<Integer, List<AttributeValue>> reCalculatedCaseToListOfAttributeValues = buildCaseToListOfAttributeValues(
+				attributeValueSet);
+
+		// Calculate the characteristic set
+		TreeSet characteristicSet = calculateCharacteristicSet(caseToListOfAttributeValues,
+				reCalculatedCaseToListOfAttributeValues, attributeValueSet, universe);
+
+		LinkedHashMap caseAndCharacteristicSet = new LinkedHashMap();
+		Iterator cSetIter = characteristicSet.iterator();
+		while (cSetIter.hasNext()) {
+			CharacteristicSet cset = (CharacteristicSet) cSetIter.next();
+			caseAndCharacteristicSet.put(cset.caseNum, cset.intersectedCharacteristicSet);
+		}
+		// calculate lower and upper approximations..
+		Map conceptAndLowerConceptApproximations = calculateApporximation(decisionValueSet, caseAndCharacteristicSet,
+				true);
+		Map conceptAndUpperConceptApproximations = calculateApporximation(decisionValueSet, caseAndCharacteristicSet,
+				false);
+
+		List allListOfRules = new ArrayList();
+		if (lowerApproximation) { // lowerApproximation from IO
+			System.out.println("\nProcessing rules for lower approximation..."); // run the MLEM2 on lower approximation
+			allListOfRules = runAlgorithm(attributeValueSet, conceptAndLowerConceptApproximations, universe,
+					decisionValueSet);
+			System.out.println("\nFinal Ruleset...");
+			for (int i = 0; i < allListOfRules.size(); i++) {
+				System.out.println(allListOfRules.get(i));
+			}
+		} else { // run the MLEM2 on upper approximation
+			System.out.println("\nProcessing rules for Upper approximation...");
+			allListOfRules = runAlgorithm(attributeValueSet, conceptAndUpperConceptApproximations, universe,
+					decisionValueSet);
+			System.out.println("\nFinal Ruleset...");
+			for (int i = 0; i < allListOfRules.size(); i++) {
+				System.out.println(allListOfRules.get(i));
+			}
+		}
+		return (ArrayList) allListOfRules;
+	}
+
+	// this method resolves, don't care conditions (*) and other attribute values
+	// (-)
+	private Map<AttributeValue, TreeSet> resolveAttributeValueSetSolvingMissingAttributes(
+			Map<AttributeValue, TreeSet> attributeValueSet, Map<Integer, List<AttributeValue>> caseTodecisionValue,
+			Map<Integer, List<AttributeValue>> caseToListOfAttributeValues,
+			Map<AttributeValue, TreeSet> decisionValueSet) {
+		Map<AttributeValue, TreeSet> attributeValueSetCopy = new LinkedHashMap();
+		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
+			attributeValueSetCopy.put(entry.getKey(), entry.getValue());
+		}
+
 		// -----Reconstruct attributeValue solving the * and -
 		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSetCopy.entrySet()) {
 			// there can be many don't care conditions for a single attribute,
-			// the attribute values for that attribute should include, all don't care
-			// conditions.
+			// all the values for that attribute should include, all don't care
+			// condition case nums.
 			if (entry.getKey().value.equals("*")) {
 				for (Map.Entry<AttributeValue, TreeSet> innerEntry : attributeValueSet.entrySet()) {
 					if (innerEntry.getKey().attribute.equals(entry.getKey().attribute)
@@ -304,6 +519,13 @@ public class MLEM2Algorithm {
 					}
 				}
 			}
+			// incase of use other attribute value "-", whenever we identify an attribute
+			// with -.
+			// we identify cases all cases for that attribute and iterate over those cases,
+			// to identify corresponding decisions.
+			// we then identify cases with same decision. We then iterate on those cases,
+			// identify the same attribute and add the case num we identified initially to
+			// each of the attribute in that loop, where the attribute matches.
 			if (entry.getKey().value.equals("-")) {
 				TreeSet casesWithUseOtherValue = entry.getValue();
 				Iterator it = casesWithUseOtherValue.iterator();
@@ -327,104 +549,7 @@ public class MLEM2Algorithm {
 				}
 			}
 		}
-		// remove unnecessary */-/? from attributeValueSet
-		attributeValueSetCopy = new LinkedHashMap();
-		for (Map.Entry<AttributeValue, TreeSet> entry : attributeValueSet.entrySet()) {
-			if (entry.getKey().value.equals("*") || entry.getKey().value.equals("?")
-					|| entry.getKey().value.equals("-")) {
-				// skip
-			} else {
-				attributeValueSetCopy.put(entry.getKey(), entry.getValue());
-			}
-		}
-		attributeValueSet = attributeValueSetCopy;
-		Map<Integer, List<AttributeValue>> reCalculatedCaseToListOfAttributeValues = buildCaseToListOfAttributeValues(
-				attributeValueSet);
-		// ------CharacteristicSetBuilder
-
-		// ----CharacteristicSet calculator
-		TreeSet characteristicSet = new TreeSet();
-		for (Map.Entry<Integer, List<AttributeValue>> entry : caseToListOfAttributeValues.entrySet()) {
-			List avList = entry.getValue();
-			TreeSet set = new TreeSet();
-			for (int i = 0; i < avList.size(); i++) {
-				AttributeValue av = (AttributeValue) avList.get(i);
-				TreeSet setToUse = new TreeSet();
-				if (av.value.equals("*") || av.value.equals("?")) {
-					setToUse = (TreeSet) universe.clone();
-				} else if (av.value.equals("-")) {
-					List avs = reCalculatedCaseToListOfAttributeValues.get(entry.getKey());
-					for (int j = 0; j < avs.size(); j++) {
-						AttributeValue avRecalc = (AttributeValue) avs.get(j);
-						if (avRecalc.attribute.equals(av.attribute)) {
-							setToUse.addAll(attributeValueSet.get(avRecalc));
-						}
-					}
-					if (setToUse.isEmpty()) {
-						setToUse = universe;
-					}
-				} else {
-					setToUse = (TreeSet) attributeValueSet.get(av).clone();
-				}
-				if (set.isEmpty()) {
-					set = setToUse;
-				} else {
-					set.retainAll(setToUse);
-				}
-			}
-			characteristicSet.add(new CharacteristicSet(entry.getKey(), set));
-		}
-		// System.out.println("Final Characteristic Set");
-		// System.out.println(characteristicSet);
-		LinkedHashMap caseAndCharacteristicSet = new LinkedHashMap();
-		Iterator cSetIter = characteristicSet.iterator();
-		while (cSetIter.hasNext()) {
-			CharacteristicSet cset = (CharacteristicSet) cSetIter.next();
-			caseAndCharacteristicSet.put(cset.caseNum, cset.intersectedCharacteristicSet);
-		}
-
-		// ----Calculate concept approximations..
-		Map conceptAndLowerConceptApproximations = new HashMap();
-		Map conceptAndUpperConceptApproximations = new HashMap();
-		for (Map.Entry<AttributeValue, TreeSet> entry : decisionValueSet.entrySet()) {
-			TreeSet lowerConceptApproximation = new TreeSet();
-			TreeSet upperConceptApproximation = new TreeSet();
-			TreeSet<Integer> concept = (TreeSet) entry.getValue().clone();
-			Iterator it = concept.iterator();
-			while (it.hasNext()) {
-				TreeSet set = (TreeSet) caseAndCharacteristicSet.get(it.next());
-				if (concept.containsAll(set)) {
-					lowerConceptApproximation.addAll(set);
-				}
-				TreeSet conceptClone = (TreeSet) concept.clone();
-
-				conceptClone.retainAll(set);
-				if (!conceptClone.isEmpty()) {
-					upperConceptApproximation.addAll(set);
-				}
-			}
-			conceptAndLowerConceptApproximations.put(entry.getKey(), lowerConceptApproximation);
-			conceptAndUpperConceptApproximations.put(entry.getKey(), upperConceptApproximation);
-		}
-		List allListOfRules = new ArrayList();
-		if (lowerApproximation) {
-			System.out.println("\nProcessing rules for lower approximation...");
-			allListOfRules = runAlgorithm(attributeValueSet, conceptAndLowerConceptApproximations, universe,
-					decisionValueSet);
-			System.out.println("\nFinal Ruleset...");
-			for (int i = 0; i < allListOfRules.size(); i++) {
-				System.out.println(allListOfRules.get(i));
-			}
-		} else {
-			System.out.println("\nProcessing rules for Upper approximation...");
-			allListOfRules = runAlgorithm(attributeValueSet, conceptAndUpperConceptApproximations, universe,
-					decisionValueSet);
-			System.out.println("\nFinal Ruleset...");
-			for (int i = 0; i < allListOfRules.size(); i++) {
-				System.out.println(allListOfRules.get(i));
-			}
-		}
-		return (ArrayList) allListOfRules;
+		return attributeValueSet;
 	}
 
 	public ArrayList<RulestoGoal> runAlgorithm(Map<AttributeValue, TreeSet> attributeValueSet,
@@ -447,21 +572,17 @@ public class MLEM2Algorithm {
 			boolean recalc = false; // tells whether the algorithm needs a recalc of intersections between attribute
 									// value pairs and new goal(part goal)
 			boolean completeDecisionReached = false;
-			int test = 0;
-			// System.out.println("New Decision " + currentDecision);
 			List<AttributeValue> listOfConditionsForARule = new ArrayList<AttributeValue>();
 			List alreadyCalculatedAttributeValues = new ArrayList();
 			TreeSet<?> rulesIntersectionCalculator = new TreeSet();
 			boolean partCalc = false;
 			do {
-				// System.out.println(currentDecision);
 				if (completeDecisionReached) {
 					break;
 				}
 				recalc = false;
 				do {
 					TreeSet avDvIntersectionSets;
-					// System.out.println("Current Decision " + currentDecision);
 					if (partCalc) {
 						partCalc = false;
 						avDvIntersectionSets = calculateTheIntersectionSet(attributeValueSet, currentDecision,
@@ -488,12 +609,11 @@ public class MLEM2Algorithm {
 							continue; // do not consider empty intersection sets.
 						}
 						if (listOfConditionsForARule.isEmpty()) {
-							// System.out.println(ruleToConsider.ruleId);
 							listOfConditionsForARule.add(ruleToConsider.ruleId);
 							rulesIntersectionCalculator = (TreeSet<?>) ruleToConsider.avCollection.clone();
 							// add the first attribute value collection to rulesIntersection calculator
 						} else {
-							// System.out.println(ruleToConsider.ruleId);
+
 							listOfConditionsForARule.add(ruleToConsider.ruleId);
 							rulesIntersectionCalculator.retainAll(ruleToConsider.avCollection);
 							// if not empty then use rulesIntersection calculator for cumulative
@@ -504,8 +624,8 @@ public class MLEM2Algorithm {
 							if (rulesIntersectionCalculator.equals(concept.getValue())) {
 								// if complete match with concept, goal achieved.
 								allListOfRules.add(new RulestoGoal(
-										concept.getKey(), simplifyIntervals(simplify(listOfConditionsForARule,
-												attributeValueSet, universe, rulesIntersectionCalculator)),
+										concept.getKey(), simplify(simplifyIntervals(listOfConditionsForARule),
+												attributeValueSet, universe, rulesIntersectionCalculator),
 										rulesIntersectionCalculator));
 								// System.out.println("Goal achieved" + rulesIntersectionCalculator
 								// + "is subset and matched goal " + concept.getValue());
@@ -514,8 +634,8 @@ public class MLEM2Algorithm {
 							} else {
 								// part of goal satisfied.
 								allListOfRules.add(new RulestoGoal(
-										concept.getKey(), simplifyIntervals(simplify(listOfConditionsForARule,
-												attributeValueSet, universe, rulesIntersectionCalculator)),
+										concept.getKey(), simplify(simplifyIntervals(listOfConditionsForARule),
+												attributeValueSet, universe, rulesIntersectionCalculator),
 										rulesIntersectionCalculator));
 								currentDecision = new TreeSet(concept.getValue());
 								// current decision gets updated..
@@ -525,7 +645,6 @@ public class MLEM2Algorithm {
 								// bug fix --> not resetting the already used attributes when partial goal is
 								// achieved.
 								alreadyCalculatedAttributeValues = new ArrayList();
-
 								// current decision gets updated to total concept minus part decision.
 								if (partDecision.equals(concept.getValue())) {
 									completeDecisionReached = true;
@@ -540,7 +659,7 @@ public class MLEM2Algorithm {
 								break;
 							}
 						} else {
-
+							// current decision gets updated
 							TreeSet duplicaterulesIntersectionCalculator = (TreeSet) rulesIntersectionCalculator
 									.clone();
 							duplicaterulesIntersectionCalculator.retainAll(currentDecision);
@@ -600,6 +719,7 @@ public class MLEM2Algorithm {
 		return (ArrayList) allListOfRules;
 	}
 
+	// this method identifies redundant rules if any and removes them
 	private ArrayList<RulestoGoal> runRedundancyCheck(ArrayList<RulestoGoal> allListOfRules) {
 		Set alreadyCovered = new TreeSet();
 		ArrayList nonRedundantRules = new ArrayList();
@@ -613,36 +733,52 @@ public class MLEM2Algorithm {
 		return nonRedundantRules;
 	}
 
-	private List simplify(List listOfConditionsForARule, Map<AttributeValue, TreeSet> attributeValueSet,
+	// simplify the conditions, see if conditions can be dropped and still the
+	// concept is covered
+	private List simplify(List<AttributeValue> listOfConditionsForARule, Map<AttributeValue, TreeSet> attributeValueSet,
 			TreeSet universe, TreeSet conceptsCovered) {
 		int numberOfConditions = listOfConditionsForARule.size();
 		List<Integer> indexesThatCanBeRemoved = new ArrayList<Integer>();
-		for (int j = 0; j < numberOfConditions; j++) {
+		for (int j = 0; j < numberOfConditions; j++) { // this loops keeps removing one condition at a time.
 			TreeSet set = new TreeSet();
 			set.addAll(universe);
 			for (int k = 0; k < numberOfConditions; k++) {
-				if (indexesThatCanBeRemoved.contains(k)) {
+				if (indexesThatCanBeRemoved.contains(k)) { // if we already identified that a condition can be removed,
+															// do not insert it back into calculation
 					continue;
 				}
-				if (j == k) {
+				if (j == k) { // the condition that is removed by loop above, do not insert it into
+								// calculation
 					continue;
 				}
-				set.retainAll(attributeValueSet.get((listOfConditionsForARule.get(k))));
+				TreeSet setTobeIntersected = attributeValueSet.get((listOfConditionsForARule.get(k)));
+				if (setTobeIntersected == null) {
+					setTobeIntersected = calculateSetTobeIntersected(listOfConditionsForARule.get(k),
+							attributeValueSet);
+				}
+				set.retainAll(setTobeIntersected); // intersect rest all conditions. (initial set
+				// will be universe)
 
 			}
 			if (conceptsCovered.containsAll(set)) {
-				indexesThatCanBeRemoved.add(j);
+				indexesThatCanBeRemoved.add(j); // if the final intersection still covers all the concepts, then the
+												// condition can be dropped and add to index of conditions that can be
+												// removed.
 			}
 		}
 		if (indexesThatCanBeRemoved.size() > 0) {
 			for (int l = indexesThatCanBeRemoved.size() - 1; l >= 0; l--) {
-				listOfConditionsForARule.remove((int) indexesThatCanBeRemoved.get(l));
+				listOfConditionsForARule.remove((int) indexesThatCanBeRemoved.get(l)); // iterate over list of indexes
+																						// of conditions that can be
+																						// removed and remove them from
+																						// ending of the arraylist
 			}
 		}
 		return listOfConditionsForARule;
 	}
 
-	private List simplifyIntervals(List listOfRules) {
+	// simplifies the intervals using ranges.
+	private List<AttributeValue> simplifyIntervals(List listOfRules) {
 		Map<String, String> attributeValues = new HashMap();
 		AttributeValue rule;
 		// go over all attribute values and see what attributes can be simplified..
@@ -686,5 +822,4 @@ public class MLEM2Algorithm {
 
 		return listOfRules;
 	}
-
 }

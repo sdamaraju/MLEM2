@@ -10,7 +10,7 @@ import java.util.TreeSet;
 public class IntersectionSelection implements Comparable {
 	AttributeValue ruleId;
 	Set intersectedCollection; // should be maximum Priority 1
-	TreeSet avCollection; // should be minimum
+	TreeSet avCollection;
 	int sizeOfAttributes; // should be minimum Priority 2
 	int orderOfAttribute; // in the same order Priority 3
 	boolean alreadyUsed; // actually not necessary as we are sorting.
@@ -28,6 +28,10 @@ public class IntersectionSelection implements Comparable {
 
 	@Override
 	public int compareTo(Object o) {
+		// we first check the size of the intersection, and that has to be greater, if
+		// they both are same, we then evaluate what is the (a,v) cases covered size,
+		// and that should be smaller, if that is also same then we go with the order of
+		// the intersection happened
 		if (((IntersectionSelection) o).intersectedCollection.size() - this.intersectedCollection.size() == 0) {
 			if (this.sizeOfAttributes - ((IntersectionSelection) o).sizeOfAttributes == 0) {
 				return this.orderOfAttribute - ((IntersectionSelection) o).orderOfAttribute;
