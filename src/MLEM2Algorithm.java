@@ -189,22 +189,31 @@ public class MLEM2Algorithm {
 			}
 		} // add all the ranges for that attribute to a set.
 		Iterator<Range> rangesSetIterator = rangesSet.iterator();
-		Range[] rangesTobeIntersected = new Range[2];
+		Range[] rangesTobeIntersected = new Range[rangesSet.size()];
 		int rangeSize = 0;
 		while (rangesSetIterator.hasNext()) { // iterate over all ranges and identify the minimum and maximum matches.
 			Range next = rangesSetIterator.next();
-			if (next.minimum.equals(currentRange.minimum) || next.maximum.equals(currentRange.maximum)) {
+			// collect all ranges that have minimum equals with currentCondition's minimum
+			// and containing current conditions' maximum
+			// and all ranges that have maximum equals with currentCondition's maximum and
+			// containing current conditions' minimum
+			if ((next.minimum.equals(currentRange.minimum) && next.contains(currentRange.maximum))
+					|| next.maximum.equals(currentRange.maximum) && next.contains(currentRange.minimum)) {
 				rangesTobeIntersected[rangeSize++] = next;
 			}
-			if (rangeSize == 2) {// there will be only 2 ranges, 1 matching the minimum and 1 matching the
-									// maximum
-				break;
-			}
+
 		} // now intersect the avs identified by avs using the 2 ranges
-		AttributeValue av1 = new AttributeValue(currentCondition.attribute, rangesTobeIntersected[0].toString(), true);
-		AttributeValue av2 = new AttributeValue(currentCondition.attribute, rangesTobeIntersected[1].toString(), true);
-		TreeSet setTobeIntersected = (TreeSet) attributeValueSet.get(av1).clone();
-		setTobeIntersected.retainAll(attributeValueSet.get(av2));
+		TreeSet setTobeIntersected = new TreeSet();
+		for (int i = 0; i < rangesTobeIntersected.length; i++) {
+			AttributeValue av = new AttributeValue(currentCondition.attribute, rangesTobeIntersected[0].toString(),
+					true);
+			if (setTobeIntersected.isEmpty()) {
+				setTobeIntersected = (TreeSet) attributeValueSet.get(av).clone();
+			} else {
+				setTobeIntersected.retainAll(attributeValueSet.get(av));
+			}
+
+		}
 		return setTobeIntersected;
 	}
 
