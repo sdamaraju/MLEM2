@@ -1,0 +1,9 @@
+[ Wind humidity temp trip ]
+low low med yes
+? low * yes
+* med med yes
+low ? High maybe
+med - med maybe
+* high low no
+- high * no
+Med high high no
