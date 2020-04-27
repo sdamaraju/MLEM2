@@ -4,38 +4,53 @@ Sai krishna Teja Damaraju
 
 Implementation of MLEM2 algorithm with concept approximations for complete and incomplete data sets.
 
-System requirements : 
-Any system with Java version greater than 1.5 is required.
-Classes in bin folder are compiled with runtime version 57, if the JRE version in any other system is lesser, program would fail to run. In such case please remove all the classes and recompile the java files.
+### Ways to run the algorithm ###
 
+There are 2 ways to run the algorithm.
 
-
-Please follow the below steps for execution.
+-> Using shortcut "run.sh"
 
 1. Copy the EECS839-ProgrammingProject#3028488 to any system that has Java enabled.
 
-2. Execute the below commands.
+2. Open the EECS839-ProgrammingProject#3028488 folder.
+
+3. Double-click on the run.sh command.
+
+(If the double-click doesn't work, please use terminal and run the below command)
+sh run.sh
+
+#If the above fails, please use the below steps to run the algorithm manually.
+
+-> Manual command prompt run
+
+1. Copy the EECS839-ProgrammingProject#3028488 to any system that has Java enabled.
+
+2. Execute the below commands on a terminal.
 	
-	a. cd - Change directory to "EECS839-ProgrammingProject #3028488"/src
+	a. cd - Change directory to "EECS839_Programming_Project_#3028488"/src
 	-Changes directory to Project's Source folder
 
-	b. javac MLEM2Implementation.java
+	b. javac -d ../classes MLEM2Implementation.java
 	-Generates all necessary classes.
 
-	c. java MLEM2Implementation
+	c. cd ../classes
+	-Changes directory to classes folder where the classes are generated.
+
+	d. java MLEM2Implementation
 	-Runs the MLEM2Implementation
 
+### MLEM2 with Concept approximation User inputs ###
 
-3. Once the execution begins, console prompts user to enter a valid input file name.
+1. Once the execution begins, console prompts user to enter a valid input file name.
 	
 	"Please enter a valid input file name with absolute path..."
 
 	-Upon seeing this message, please provide entire path including the file name in the below pattern. 
-	"/Users/sdamaraju/Desktop/EECS839/SimpleTest.txt"
+	"/Users/sdamaraju/Desktop/EECS839/SimpleTest.txt" (quotes not required)
 
-4. If the provided file is not valid, console reverts to user, asking to enter the appropriate file name.
+2. If the provided file is not valid, console reverts to user, asking to enter the appropriate file name.
 
-5. Once file name is successfully entered, console prompts user for approximation details with below message.
+3. Once file name is successfully entered, console prompts user for approximation details with below message.
 	
 	"Please type in 'lower' for lower concept approximation..."
 
@@ -43,8 +58,19 @@ Please follow the below steps for execution.
 
 If your data set is "complete" and not missing any attributes, algorithm is efficient enough to understand that approximation is not required and ignores any input provided for approximation.
 
-6. Console then prompts for output file path and name, to print the rules, by showing the below message.
+4. Console then prompts for output file path and name, to print the rules, by showing the below message.
 
 	"Please enter an output file (path) name..."
 	
-	If the file doesn't exist in the path, the algorithm creates the file and writes the result to the file.
+	If the file doesn't exist in the path, the algorithm creates the file and writes the result to the file. Please understand that, if file path is not provided, the file will be created in the classes folder.
+
+
+### Important Note : System requirements ###
+
+System requirements :
+ 
+1. Any system with Java version - JDK greater than 1.5 is required.
+
+2. The two ways explained above to run the algorithm, require "javac/java" commands, to compile the sources and run. Please make sure appropriate java JDK and JRE versions are installed and the PATH variables are set.
+
+3. If already generated classes in classes folder are being used in a manual way other than the 2 ways described above, please note that they are compiled with runtime version 57, if the JRE version in any other system is lesser, program would fail to run. In such case please remove all the classes and recompile the java files in the src directory.
