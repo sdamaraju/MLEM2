@@ -12,23 +12,13 @@ public class MLEM2Implementation {
 
 	public static void main(String[] args) throws IOException {
 		Object io[] = performIO();
-		// URL url = new
-		// URL("https://people.eecs.ku.edu//~jerzygb/data//iris-35-h.txt"); //
-		// BufferedReader br1 = new BufferedReader(new
-		// InputStreamReader(url.openStream()));//
-		// File file = new
-		// File("/Users/sdamaraju/Desktop/EECS839/MLEM2NotesProblem2.txt");
-		// BufferedReader br = new BufferedReader(new FileReader(file));
-
 		Object[] problemMetaData = FileParser.parseFileToCreateComputationalData((BufferedReader) io[0]);
-		// Object[] problemMetaData =
-		// FileParser.parseFileToCreateComputationalData(br1);
-		Boolean missingAttributes = (Boolean) problemMetaData[2];
+		Boolean missingAttributesOrDataInconsistent = (Boolean) problemMetaData[2];
 		MLEM2Algorithm algo = new MLEM2Algorithm();
 		ArrayList finalRuleset = new ArrayList();
-		if (missingAttributes) {
+		if (missingAttributesOrDataInconsistent) {
 			finalRuleset = algo.preWorkAndRunAlgorithm((Map) problemMetaData[0], (Map) problemMetaData[1],
-					/* (Boolean) io[1] */ false);
+					(Boolean) io[1]);
 		} else {
 			finalRuleset = algo.runAlgorithm((Map) problemMetaData[0], (Map) problemMetaData[1]);
 		}
@@ -77,9 +67,10 @@ public class MLEM2Implementation {
 		ioRequirements[1] = lowerApproximation;
 		System.out.println("#Result output file details#");
 		System.out.println("Please enter an output file (path) name...");
-		String outputFilePath = sc.nextLine();
 		boolean outputFileSuccess = true;
+		String outputFilePath = "";
 		do {
+			outputFilePath = sc.nextLine();
 			file = new File(outputFilePath);
 			if (!file.exists()) {
 				try {
@@ -98,49 +89,13 @@ public class MLEM2Implementation {
 
 }
 
-// Things pending..
-// 1. cutpoints calculation.       done..
-// 2. final rules simplification   done..
-// 3. interval simplification..    done..
-
-//*** minor issue, decimals taking too much unnecessary precision.. solved
-//major issue solved. missed goal = goal intersection [t] done..
-
-// otherwise tested on multiple data, looks fine.
-
-// 4. inconsistent data check ....mostly not required
-// 5. Handle input for inconsistent DONE
-//		data.
-// 6. Approximation calculations.. DONE
-// 7. concept approximation.. characteristic sets.. DONE
-//8.Handle IO as per the instructions ...DONE
-//9.Clean the code and optimize wherevr possible. ...DONE
-///10 Comments wherver necessary ..DONE
-
-//Pending :
-//Rigorous testing on exam problem hw problem and all classwork problems and sample problems
-// readme file
-//*** minor simplification issue, call simplifyIntervals and then
-//simplify rules.. but once interval is simplified, cant get the attribute value pairs as cutpoints are solved.. handle this
-
-//====URLS and files for data
-// URL url = new
-// URL("https://people.eecs.ku.edu//~jerzygb//data//m-global.txt");
-// URL url = new
-// URL("https://people.eecs.ku.edu//~jerzygb//data//austr-aca-35.txt");
-// URL url = new
-// URL("https://people.eecs.ku.edu//~jerzygb//data//echo-35-s.txt");
-// URL url = new
-// URL("https://people.eecs.ku.edu//~jerzygb//data//iris-35-qm.txt");
-// URL url = new
-// URL("https://people.eecs.ku.edu//~jerzygb/data//iris-35-h.txt");
+//Test runs
+//URL url = new
+// URL("https://people.eecs.ku.edu//~jerzygb/data//iris-35-h.txt"); //
 // BufferedReader br1 = new BufferedReader(new
-// InputStreamReader(url.openStream()));
-
-// File file = new
-// File("//Users//sdamaraju//Desktop//EECS839//EECS839MissingData.txt");
-// File file = new
-// File("//Users//sdamaraju//Desktop//EECS839//NotesProblem1.txt");
+// InputStreamReader(url.openStream()));//
 // File file = new
 // File("/Users/sdamaraju/Desktop/EECS839/MLEM2NotesProblem2.txt");
 // BufferedReader br = new BufferedReader(new FileReader(file));
+//Object[] problemMetaData =
+// FileParser.parseFileToCreateComputationalData(br1);

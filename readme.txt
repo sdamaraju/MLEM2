@@ -1,5 +1,5 @@
 EECS 839, Programming project
-Sai krishna Teja Damaraju
+Sai Krishna Teja Damaraju
 #3028488
 
 Implementation of MLEM2 algorithm with concept approximations for complete and incomplete data sets.
@@ -10,24 +10,30 @@ There are 2 ways to run the algorithm.
 
 -> Using shortcut "run.sh"
 
-1. Copy the EECS839-ProgrammingProject#3028488 to any system that has Java enabled.
+1. Copy the EECS839_ProgrammingProject_#3028488 to any system that has Java enabled.
 
-2. Open the EECS839-ProgrammingProject#3028488 folder.
+2. Open the EECS839_ProgrammingProject_#3028488 folder.
 
 3. Double-click on the run.sh command.
 
-(If the double-click doesn't work, please use terminal and run the below command)
-sh run.sh
+(Steps mentioned above are tested on MAC as well as Windows systems).
 
-#If the above fails, please use the below steps to run the algorithm manually.
+(On Mac : if the double-click doesn't work due to authenticity issues by Mac OS,
+ please provide execute permissions to run.sh by running the command :  "chmod a+x run.sh" 
+ and then try double clicking the command.	
+ if it still fails : please use terminal to change directory to the Project directory
+ and run the below command)
+ "sh run.sh"
+
+#If still the above fails, please use the below steps to run the algorithm manually.
 
 -> Manual command prompt run
 
-1. Copy the EECS839-ProgrammingProject#3028488 to any system that has Java enabled.
+1. Copy the EECS839_ProgrammingProject_#3028488 to any system that has Java enabled.
 
 2. Execute the below commands on a terminal.
 	
-	a. cd - Change directory to "EECS839_Programming_Project_#3028488"/src
+	a. cd "EECS839_Programming_Project_#3028488"/src
 	-Changes directory to Project's Source folder
 
 	b. javac -d ../classes MLEM2Implementation.java
@@ -56,7 +62,9 @@ sh run.sh
 
 	-As the message says, if your data set is incomplete, and you want to calculate "lower approximation" for the same, then type in "lower" (case in-sensitive), any other input, or even pressing just "enter" key, will calculate upper approximation for the same.
 
-If your data set is "complete" and not missing any attributes, algorithm is efficient enough to understand that approximation is not required and ignores any input provided for approximation.
+Please noter that if the data set is "complete", not missing any attributes and is "consistent", then 
+the algorithm is efficient enough to understand that approximation is not required and ignores
+any input provided for approximation.
 
 4. Console then prompts for output file path and name, to print the rules, by showing the below message.
 
