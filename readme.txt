@@ -8,20 +8,21 @@ Implementation of MLEM2 algorithm with concept approximations for complete and i
 
 There are 2 ways to run the algorithm.
 
--> Using shortcut "run.sh"
+-> Using shortcut "run.sh" for MAC/ Linux and "run.bat" for windows systems.
 
 1. Copy the EECS839_ProgrammingProject_#3028488 to any system that has Java enabled.
 
 2. Open the EECS839_ProgrammingProject_#3028488 folder.
 
-3. Double-click on the run.sh command.
+3. Double-click on the run.sh/run.bat command.
 
-(Steps mentioned above are tested on MAC as well as Windows systems).
+(Steps mentioned above are tested on MAC as well as Windows systems but not on linux systems).
 
 (On Mac : if the double-click doesn't work due to authenticity issues by Mac OS,
- please provide execute permissions to run.sh by running the command :  "chmod a+x run.sh" 
- and then try double clicking the command.	
- if it still fails : please use terminal to change directory to the Project directory
+Please try doing a "right-click" on the "run.sh" file and then click "open", followed by clicking the "open" button in the confirmation dialog box. 
+That should run the command for the first time and a double click would work every next time.
+
+ If it still fails : please use terminal to change directory to the Project directory
  and run the below command)
  "sh run.sh"
 

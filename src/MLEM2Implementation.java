@@ -22,10 +22,12 @@ public class MLEM2Implementation {
 		} else {
 			finalRuleset = algo.runAlgorithm((Map) problemMetaData[0], (Map) problemMetaData[1]);
 		}
-
-		String finalResultString = finalRuleset.toString();
+		StringBuffer finalResultString = new StringBuffer();
+		for (int i = 0; i < finalRuleset.size(); i++) {
+			finalResultString.append(finalRuleset.get(i).toString() + "\n");
+		}
 		FileOutputStream writer = (FileOutputStream) io[2];
-		writer.write(finalResultString.substring(1, finalResultString.length() - 1).getBytes());
+		writer.write(finalResultString.toString().getBytes());
 		writer.close();
 	}
 
